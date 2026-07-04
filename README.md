@@ -7,6 +7,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![pnpm](https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 [![PWA](https://img.shields.io/badge/PWA-offline-5A0FC8?logo=pwa&logoColor=white)](https://sutezo.github.io/simplePersonalDB/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 オフラインで動作する簡易個人データベース PWA。iPhone のホーム画面に追加して使う。
 静的サイト + 全処理クライアント内 + 外部通信ゼロ。要件は `docs/REQUIREMENTS.md` を参照。
