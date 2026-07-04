@@ -1,5 +1,13 @@
 # simplePersonalDB
 
+[![Deploy](https://img.shields.io/github/actions/workflow/status/sutezo/simplePersonalDB/deploy.yml?branch=main&label=deploy&logo=github)](https://github.com/sutezo/simplePersonalDB/actions/workflows/deploy.yml)
+[![Site](https://img.shields.io/website?url=https%3A%2F%2Fsutezo.github.io%2FsimplePersonalDB%2F&label=site)](https://sutezo.github.io/simplePersonalDB/)
+[![Svelte](https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white)](https://svelte.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![pnpm](https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![PWA](https://img.shields.io/badge/PWA-offline-5A0FC8?logo=pwa&logoColor=white)](https://sutezo.github.io/simplePersonalDB/)
+
 オフラインで動作する簡易個人データベース PWA。iPhone のホーム画面に追加して使う。
 静的サイト + 全処理クライアント内 + 外部通信ゼロ。要件は `docs/REQUIREMENTS.md` を参照。
 
