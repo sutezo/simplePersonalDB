@@ -60,6 +60,12 @@ UI 構成: `+page.svelte` が一覧 + 詳細の 2 ペイン（モバイルは切
 （`svelte-ignore state_referenced_locally` はそのための意図的な指定）。
 一覧は自前の `VirtualList.svelte`（固定行高の仮想スクロール）。
 
+カレンダー機能（`/calendar`）: `valueType === 'date'` のエントリのみを値の日付に配置した
+月表示（表示専用、タグ絞り込みのみ）。純粋ロジックは `calendar.ts`（`filterDateEntries` で
+日時型を抽出＋タグ絞り込みに `filter.ts` の `filterEntries` を再利用、`buildMonthGrid` で
+日曜始まりの月グリッドを生成。タイムゾーンずれ回避のため日付は文字列ベースで組む）。
+描画は `CalendarView.svelte`、ルート統括は `routes/calendar/+page.svelte`。
+
 ## デプロイ（GitHub Pages）
 
 `main` への push で `.github/workflows/deploy.yml` が自動デプロイ →

@@ -23,6 +23,7 @@
 	// base-prefixed so links work when hosted under a sub path (GitHub Pages).
 	const links = [
 		{ href: `${base}/`, label: '一覧' },
+		{ href: `${base}/calendar`, label: 'カレンダー' },
 		{ href: `${base}/sql`, label: 'SQL' }
 	];
 
