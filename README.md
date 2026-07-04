@@ -68,3 +68,7 @@ GitHub Pages へ自動デプロイ（`.github/workflows/deploy.yml`）。
 - 初回のみ、リポジトリの Settings → Pages → Source を「GitHub Actions」にすること
 
 Netlify にもデプロイ可能（`netlify.toml`、`BASE_PATH` 未設定でルート配信）。
+
+## ライセンス
+
+MIT License
