@@ -4,12 +4,16 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Entry, EntryInput, SqlHistoryEntry } from '$lib/types';
 
 const DB_NAME = 'simple-personal-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE = 'entries';
 const HISTORY_STORE = 'sqlHistory';
+const META_STORE = 'meta';
 
 /** Maximum number of SQL history entries kept; older ones are pruned. */
 export const SQL_HISTORY_LIMIT = 50;
+
+/** Keys of the small key-value `meta` store. */
+export type MetaKey = 'lastBackupAt' | 'backupSnoozedUntil';
 
 interface PersonalDbSchema extends DBSchema {
 	entries: {
@@ -21,6 +25,10 @@ interface PersonalDbSchema extends DBSchema {
 		key: string;
 		value: SqlHistoryEntry;
 		indexes: { 'by-executedAt': string };
+	};
+	meta: {
+		key: string;
+		value: { key: MetaKey; value: string };
 	};
 }
 
@@ -41,6 +49,9 @@ function getDb(): Promise<IDBPDatabase<PersonalDbSchema>> {
 			if (oldVersion < 2) {
 				const history = db.createObjectStore(HISTORY_STORE, { keyPath: 'id' });
 				history.createIndex('by-executedAt', 'executedAt');
+			}
+			if (oldVersion < 3) {
+				db.createObjectStore(META_STORE, { keyPath: 'key' });
 			}
 		}
 	});
@@ -86,6 +97,22 @@ export async function updateEntry(id: string, input: EntryInput): Promise<Entry>
 	const updated: Entry = { ...existing, ...input, updatedAt: new Date().toISOString() };
 	await db.put(STORE, updated);
 	return updated;
+}
+
+/**
+ * Imports entries in one transaction, overwriting existing ids (upsert).
+ * Timestamps in the imported data are kept as-is (restore semantics).
+ * @param entries - Entries to import.
+ * @returns Number of imported entries.
+ */
+export async function importEntries(entries: Entry[]): Promise<number> {
+	const db = await getDb();
+	const tx = db.transaction(STORE, 'readwrite');
+	for (const entry of entries) {
+		await tx.store.put(entry);
+	}
+	await tx.done;
+	return entries.length;
 }
 
 /**
@@ -144,6 +171,27 @@ export async function listSqlHistory(): Promise<SqlHistoryEntry[]> {
 export async function deleteSqlHistory(id: string): Promise<void> {
 	const db = await getDb();
 	await db.delete(HISTORY_STORE, id);
+}
+
+/**
+ * Reads a value from the key-value meta store.
+ * @param key - Meta key to read.
+ * @returns The stored value, or null when unset.
+ */
+export async function getMeta(key: MetaKey): Promise<string | null> {
+	const db = await getDb();
+	const record = await db.get(META_STORE, key);
+	return record?.value ?? null;
+}
+
+/**
+ * Writes a value to the key-value meta store.
+ * @param key - Meta key to write.
+ * @param value - Value to store.
+ */
+export async function setMeta(key: MetaKey, value: string): Promise<void> {
+	const db = await getDb();
+	await db.put(META_STORE, { key, value });
 }
 
 /**

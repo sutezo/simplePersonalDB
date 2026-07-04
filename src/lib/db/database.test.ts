@@ -7,8 +7,11 @@ import {
 	createEntry,
 	deleteEntry,
 	deleteSqlHistory,
+	getMeta,
+	importEntries,
 	listEntries,
 	listSqlHistory,
+	setMeta,
 	updateEntry
 } from './database';
 
@@ -89,6 +92,51 @@ describe('database CRUD', () => {
 		expect(listed.length).toBe(SQL_HISTORY_LIMIT);
 		expect(listed.some((h) => h.sql === `SELECT ${SQL_HISTORY_LIMIT + 2}`)).toBe(true);
 		for (const item of listed) await deleteSqlHistory(item.id);
+	});
+
+	it('stores and reads meta values', async () => {
+		expect(await getMeta('lastBackupAt')).toBeNull();
+		await setMeta('lastBackupAt', '2026-07-04T00:00:00.000Z');
+		expect(await getMeta('lastBackupAt')).toBe('2026-07-04T00:00:00.000Z');
+		await setMeta('lastBackupAt', '2026-07-05T00:00:00.000Z');
+		expect(await getMeta('lastBackupAt')).toBe('2026-07-05T00:00:00.000Z');
+	});
+
+	it('imports entries with upsert semantics keeping timestamps', async () => {
+		const existing = await createEntry({
+			tags: [],
+			name: 'before',
+			valueType: 'text',
+			value: '',
+			memo: ''
+		});
+		const count = await importEntries([
+			{
+				...existing,
+				name: 'after',
+				updatedAt: '2026-01-01T00:00:00.000Z'
+			},
+			{
+				id: 'imported-new',
+				tags: ['restored'],
+				name: 'new entry',
+				valueType: 'text',
+				value: 'v',
+				memo: '',
+				createdAt: '2026-01-01T00:00:00.000Z',
+				updatedAt: '2026-01-01T00:00:00.000Z'
+			}
+		]);
+		expect(count).toBe(2);
+
+		const listed = await listEntries();
+		const overwritten = listed.find((e) => e.id === existing.id);
+		expect(overwritten?.name).toBe('after');
+		expect(overwritten?.updatedAt).toBe('2026-01-01T00:00:00.000Z');
+		expect(listed.some((e) => e.id === 'imported-new')).toBe(true);
+
+		await deleteEntry(existing.id);
+		await deleteEntry('imported-new');
 	});
 
 	it('lists entries newest-first by updatedAt', async () => {

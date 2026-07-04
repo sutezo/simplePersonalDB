@@ -38,6 +38,9 @@ SvelteKit 2 + Svelte 5 (runes) の純 SPA。`+layout.ts` で `ssr=false`、`adap
 
 データフロー: UI → `src/lib/db/database.ts`（idb / IndexedDB、唯一の永続層）→ 画面へ再ロード。
 検索・タグ絞り込み・並べ替えは `src/lib/db/filter.ts` の純粋関数でメモリ内処理。
+CSV の入出力は `csv.ts`（エクスポート + RFC 4180 パーサ、インポートは ID で upsert）。
+バックアップ督促は `backup.ts` の純粋関数 `needsBackupReminder` で判定し、最終バックアップ
+日時とスヌーズ期限は IndexedDB の `meta` ストア（key-value）に保存する。
 
 SQL 機能（`/sql`）: 実行のたびに IndexedDB の全レコードを sql.js（SQLite wasm）のインメモリ DB
 （テーブル名 `entries`、tags はスペース結合の TEXT）へ流し込み、SELECT のみ実行して破棄する。

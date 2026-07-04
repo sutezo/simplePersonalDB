@@ -8,11 +8,15 @@
 	import {
 		createEntry,
 		deleteEntry,
+		getMeta,
+		importEntries,
 		listEntries,
+		setMeta,
 		updateEntry
 	} from '$lib/db/database';
 	import { collectTags, filterEntries, sortByUpdatedAt } from '$lib/db/filter';
-	import { exportCsv } from '$lib/db/csv';
+	import { csvToEntries, exportCsv } from '$lib/db/csv';
+	import { needsBackupReminder, snoozeUntil } from '$lib/db/backup';
 	import EntryForm from '$lib/components/EntryForm.svelte';
 	import TagFilter from '$lib/components/TagFilter.svelte';
 	import VirtualList from '$lib/components/VirtualList.svelte';
@@ -25,6 +29,10 @@
 	let from = $state('');
 	let to = $state('');
 	let sortDirection = $state<'asc' | 'desc'>('desc');
+	let lastBackupAt = $state<string | null>(null);
+	let backupSnoozedUntil = $state<string | null>(null);
+	let importMessage = $state('');
+	let fileInput = $state<HTMLInputElement | null>(null);
 
 	const allTags = $derived(collectTags(entries));
 	const filtered = $derived(
@@ -35,12 +43,59 @@
 	);
 	const selected = $derived(entries.find((entry) => entry.id === selectedId) ?? null);
 	const editorOpen = $derived(creating || selected !== null);
+	const showBackupReminder = $derived(
+		needsBackupReminder({ entries, lastBackupAt, snoozedUntil: backupSnoozedUntil })
+	);
 
-	onMount(reload);
+	onMount(async () => {
+		await reload();
+		lastBackupAt = await getMeta('lastBackupAt');
+		backupSnoozedUntil = await getMeta('backupSnoozedUntil');
+	});
 
 	/** Reloads all entries from IndexedDB. */
 	async function reload(): Promise<void> {
 		entries = await listEntries();
+	}
+
+	/** Exports a CSV backup and records the backup time when it completes. */
+	async function handleExport(): Promise<void> {
+		const completed = await exportCsv(entries);
+		if (completed) {
+			const now = new Date().toISOString();
+			await setMeta('lastBackupAt', now);
+			lastBackupAt = now;
+		}
+	}
+
+	/** Hides the backup reminder for a few days. */
+	async function handleSnoozeBackup(): Promise<void> {
+		const until = snoozeUntil();
+		await setMeta('backupSnoozedUntil', until);
+		backupSnoozedUntil = until;
+	}
+
+	/**
+	 * Imports entries from the selected CSV file (upsert by id).
+	 * @param event - Change event of the hidden file input.
+	 */
+	async function handleImportFile(event: Event): Promise<void> {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file) return;
+		try {
+			const imported = csvToEntries(await file.text());
+			if (!window.confirm(`${imported.length}件をインポートします。同じIDの項目は上書きされます。よろしいですか？`)) {
+				importMessage = '';
+				return;
+			}
+			const count = await importEntries(imported);
+			await reload();
+			importMessage = `${count}件をインポートしました`;
+		} catch (error) {
+			importMessage = `インポート失敗: ${error instanceof Error ? error.message : String(error)}`;
+		}
 	}
 
 	/**
@@ -94,6 +149,30 @@
 	<section
 		class="flex min-w-0 flex-1 flex-col {editorOpen ? 'hidden md:flex' : 'flex'}"
 	>
+		{#if showBackupReminder}
+			<div
+				class="flex flex-wrap items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800"
+			>
+				<span class="min-w-0 flex-1">
+					データ消失に備えてバックアップをおすすめします
+					{lastBackupAt ? `（前回: ${formatDateTime(lastBackupAt)}）` : '（未実施）'}
+				</span>
+				<button
+					type="button"
+					class="shrink-0 rounded bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700"
+					onclick={handleExport}
+				>
+					今すぐバックアップ
+				</button>
+				<button
+					type="button"
+					class="shrink-0 rounded border border-amber-300 px-3 py-1 text-xs hover:bg-amber-100"
+					onclick={handleSnoozeBackup}
+				>
+					あとで
+				</button>
+			</div>
+		{/if}
 		<div class="flex flex-col gap-2 border-b border-slate-200 bg-white p-3">
 			<div class="flex gap-2">
 				<input
@@ -134,11 +213,30 @@
 				<button
 					type="button"
 					class="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
-					onclick={() => exportCsv(entries)}
+					onclick={handleExport}
 				>
 					CSVエクスポート
 				</button>
+				<button
+					type="button"
+					class="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+					onclick={() => fileInput?.click()}
+				>
+					CSVインポート
+				</button>
+				<input
+					type="file"
+					accept=".csv,text/csv"
+					class="hidden"
+					bind:this={fileInput}
+					onchange={handleImportFile}
+				/>
 			</div>
+			{#if importMessage}
+				<p class="text-xs {importMessage.startsWith('インポート失敗') ? 'text-red-600' : 'text-emerald-700'}">
+					{importMessage}
+				</p>
+			{/if}
 			<TagFilter tags={allTags} bind:selected={selectedTags} />
 		</div>
 
