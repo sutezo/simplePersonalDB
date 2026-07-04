@@ -1,17 +1,26 @@
 // IndexedDB persistence layer built on `idb`.
 // Provides CRUD operations for entries and persistent-storage negotiation.
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Entry, EntryInput } from '$lib/types';
+import type { Entry, EntryInput, SqlHistoryEntry } from '$lib/types';
 
 const DB_NAME = 'simple-personal-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'entries';
+const HISTORY_STORE = 'sqlHistory';
+
+/** Maximum number of SQL history entries kept; older ones are pruned. */
+export const SQL_HISTORY_LIMIT = 50;
 
 interface PersonalDbSchema extends DBSchema {
 	entries: {
 		key: string;
 		value: Entry;
 		indexes: { 'by-updatedAt': string; 'by-tags': string };
+	};
+	sqlHistory: {
+		key: string;
+		value: SqlHistoryEntry;
+		indexes: { 'by-executedAt': string };
 	};
 }
 
@@ -23,10 +32,16 @@ let dbPromise: Promise<IDBPDatabase<PersonalDbSchema>> | null = null;
  */
 function getDb(): Promise<IDBPDatabase<PersonalDbSchema>> {
 	dbPromise ??= openDB<PersonalDbSchema>(DB_NAME, DB_VERSION, {
-		upgrade(db) {
-			const store = db.createObjectStore(STORE, { keyPath: 'id' });
-			store.createIndex('by-updatedAt', 'updatedAt');
-			store.createIndex('by-tags', 'tags', { multiEntry: true });
+		upgrade(db, oldVersion) {
+			if (oldVersion < 1) {
+				const store = db.createObjectStore(STORE, { keyPath: 'id' });
+				store.createIndex('by-updatedAt', 'updatedAt');
+				store.createIndex('by-tags', 'tags', { multiEntry: true });
+			}
+			if (oldVersion < 2) {
+				const history = db.createObjectStore(HISTORY_STORE, { keyPath: 'id' });
+				history.createIndex('by-executedAt', 'executedAt');
+			}
 		}
 	});
 	return dbPromise;
@@ -80,6 +95,55 @@ export async function updateEntry(id: string, input: EntryInput): Promise<Entry>
 export async function deleteEntry(id: string): Promise<void> {
 	const db = await getDb();
 	await db.delete(STORE, id);
+}
+
+/**
+ * Records an executed SQL query in the history.
+ * An identical previous query is moved to the top instead of duplicated,
+ * and entries beyond {@link SQL_HISTORY_LIMIT} are pruned (oldest first).
+ * @param sql - The executed SELECT statement.
+ * @returns The stored history entry.
+ */
+export async function addSqlHistory(sql: string): Promise<SqlHistoryEntry> {
+	const db = await getDb();
+	const tx = db.transaction(HISTORY_STORE, 'readwrite');
+	for (const item of await tx.store.getAll()) {
+		if (item.sql === sql) {
+			await tx.store.delete(item.id);
+		}
+	}
+	const entry: SqlHistoryEntry = {
+		id: crypto.randomUUID(),
+		sql,
+		executedAt: new Date().toISOString()
+	};
+	await tx.store.add(entry);
+	// Keys from the index are ordered by executedAt ascending (oldest first).
+	const keys = await tx.store.index('by-executedAt').getAllKeys();
+	for (const key of keys.slice(0, Math.max(0, keys.length - SQL_HISTORY_LIMIT))) {
+		await tx.store.delete(key);
+	}
+	await tx.done;
+	return entry;
+}
+
+/**
+ * Lists the SQL history, most recent first.
+ * @returns All stored history entries.
+ */
+export async function listSqlHistory(): Promise<SqlHistoryEntry[]> {
+	const db = await getDb();
+	const items = await db.getAllFromIndex(HISTORY_STORE, 'by-executedAt');
+	return items.reverse();
+}
+
+/**
+ * Deletes one SQL history entry.
+ * @param id - Id of the history entry to delete.
+ */
+export async function deleteSqlHistory(id: string): Promise<void> {
+	const db = await getDb();
+	await db.delete(HISTORY_STORE, id);
 }
 
 /**

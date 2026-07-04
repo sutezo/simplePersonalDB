@@ -26,3 +26,13 @@ export interface Entry {
 
 /** User-editable fields of an {@link Entry}. */
 export type EntryInput = Pick<Entry, 'tags' | 'name' | 'valueType' | 'value' | 'memo'>;
+
+/** A saved SQL query from the SQL console history. */
+export interface SqlHistoryEntry {
+	/** UUID assigned when the query is recorded. */
+	id: string;
+	/** The executed SELECT statement. */
+	sql: string;
+	/** Execution timestamp (ISO 8601). */
+	executedAt: string;
+}

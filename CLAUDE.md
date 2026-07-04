@@ -41,6 +41,9 @@ SvelteKit 2 + Svelte 5 (runes) の純 SPA。`+layout.ts` で `ssr=false`、`adap
 
 SQL 機能（`/sql`）: 実行のたびに IndexedDB の全レコードを sql.js（SQLite wasm）のインメモリ DB
 （テーブル名 `entries`、tags はスペース結合の TEXT）へ流し込み、SELECT のみ実行して破棄する。
+実行成功したクエリは IndexedDB の `sqlHistory` ストアに履歴保存（同一 SQL は先頭へ移動、
+上限 `SQL_HISTORY_LIMIT` 件で古い順に削除）。IndexedDB のスキーマ変更時は `DB_VERSION` を上げ、
+`upgrade(db, oldVersion)` に移行処理を追加すること。
 wasm は `?url` インポートでバンドルに同梱（外部通信ゼロを維持）。
 純粋ロジックは `sqlEngine.ts`（Node でもテスト可能）、ブラウザ専用の wasm ロードは `sqlLoader.ts` に分離。
 

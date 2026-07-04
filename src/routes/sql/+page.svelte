@@ -1,9 +1,16 @@
 <!--
 	SQL console: runs SELECT-only queries against a throwaway in-memory SQLite
-	database rebuilt from IndexedDB on each run. Includes a simple query builder.
+	database rebuilt from IndexedDB on each run. Includes a simple query builder
+	and a persisted history of executed queries (click to load back).
 -->
 <script lang="ts">
-	import { listEntries } from '$lib/db/database';
+	import { onMount } from 'svelte';
+	import {
+		addSqlHistory,
+		deleteSqlHistory,
+		listEntries,
+		listSqlHistory
+	} from '$lib/db/database';
 	import {
 		ENTRY_COLUMNS,
 		buildDatabase,
@@ -13,6 +20,7 @@
 		type QueryResult
 	} from '$lib/db/sqlEngine';
 	import { loadSqlJs } from '$lib/db/sqlLoader';
+	import type { SqlHistoryEntry } from '$lib/types';
 
 	let sqlText = $state('SELECT name, value, tags\nFROM entries\nORDER BY updatedAt DESC');
 	let checkedColumns = $state<string[]>(['name', 'value']);
@@ -20,6 +28,11 @@
 	let result = $state<QueryResult | null>(null);
 	let errorMessage = $state('');
 	let running = $state(false);
+	let history = $state<SqlHistoryEntry[]>([]);
+
+	onMount(async () => {
+		history = await listSqlHistory();
+	});
 
 	/**
 	 * Toggles a column in the query-builder selection.
@@ -54,12 +67,45 @@
 			} finally {
 				db.close();
 			}
+			await addSqlHistory(sqlText);
+			history = await listSqlHistory();
 		} catch (error) {
 			result = null;
 			errorMessage = error instanceof Error ? error.message : String(error);
 		} finally {
 			running = false;
 		}
+	}
+
+	/**
+	 * Loads a history entry back into the editor.
+	 * @param item - History entry to load.
+	 */
+	function selectHistory(item: SqlHistoryEntry): void {
+		sqlText = item.sql;
+	}
+
+	/**
+	 * Removes one entry from the history.
+	 * @param item - History entry to remove.
+	 */
+	async function removeHistory(item: SqlHistoryEntry): Promise<void> {
+		await deleteSqlHistory(item.id);
+		history = await listSqlHistory();
+	}
+
+	/**
+	 * Formats an ISO timestamp as a short localized string.
+	 * @param iso - ISO 8601 timestamp.
+	 * @returns Localized date-time string.
+	 */
+	function formatDateTime(iso: string): string {
+		return new Date(iso).toLocaleString('ja-JP', {
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit'
+		});
 	}
 </script>
 
@@ -148,5 +194,36 @@
 			</div>
 			<p class="text-xs text-slate-400">{result.rows.length} 行</p>
 		{/if}
+	{/if}
+
+	{#if history.length > 0}
+		<section class="rounded border border-slate-200 bg-white">
+			<h2 class="border-b border-slate-200 px-3 py-2 text-sm font-bold">履歴</h2>
+			<ul>
+				{#each history as item (item.id)}
+					<li class="flex items-center gap-2 border-b border-slate-100 last:border-b-0">
+						<button
+							type="button"
+							class="flex min-w-0 flex-1 items-baseline gap-3 px-3 py-2 text-left hover:bg-slate-50"
+							title={item.sql}
+							onclick={() => selectHistory(item)}
+						>
+							<code class="truncate font-mono text-xs">{item.sql.replace(/\s+/g, ' ')}</code>
+							<span class="ml-auto shrink-0 text-xs text-slate-400">
+								{formatDateTime(item.executedAt)}
+							</span>
+						</button>
+						<button
+							type="button"
+							class="shrink-0 px-2 py-2 text-xs text-slate-400 hover:text-red-600"
+							aria-label="履歴を削除"
+							onclick={() => removeHistory(item)}
+						>
+							✕
+						</button>
+					</li>
+				{/each}
+			</ul>
+		</section>
 	{/if}
 </div>
