@@ -70,6 +70,24 @@
 	function formatDateTime(iso: string): string {
 		return new Date(iso).toLocaleString('ja-JP');
 	}
+
+	/**
+	 * Returns today's date in the yyyy-mm-dd format expected by `<input type="date">`.
+	 * @returns Today's local date.
+	 */
+	function todayDateString(): string {
+		const now = new Date();
+		const month = String(now.getMonth() + 1).padStart(2, '0');
+		const day = String(now.getDate()).padStart(2, '0');
+		return `${now.getFullYear()}-${month}-${day}`;
+	}
+
+	/** Prefills today's date when switching to the date type with an empty value. */
+	function handleValueTypeChange(): void {
+		if (valueType === 'date' && value.trim().length === 0) {
+			value = todayDateString();
+		}
+	}
 </script>
 
 <form
@@ -117,7 +135,11 @@
 	<div class="flex gap-3">
 		<label class="flex flex-col gap-1 text-sm">
 			<span class="font-medium">データ型</span>
-			<select class="rounded border border-slate-300 px-2 py-2" bind:value={valueType}>
+			<select
+				class="rounded border border-slate-300 px-2 py-2"
+				bind:value={valueType}
+				onchange={handleValueTypeChange}
+			>
 				<option value="text">テキスト</option>
 				<option value="date">年月日</option>
 			</select>
