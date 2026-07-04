@@ -8,11 +8,13 @@ export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   server: {
     host: '0.0.0.0',
-    port: 42304
+    port: 42304,
+    strictPort: true
   },
   preview: {
     host: '0.0.0.0',
-    port: 4173
+    port: 4173,
+    strictPort: true
   },
   test: {
     include: ['src/**/*.test.ts'],

@@ -37,7 +37,6 @@
 	let syncing = $state(false);
 	let lastGoogleDriveSyncAt = $state<string | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
-	const googleDriveSyncConfigured = isGoogleDriveSyncConfigured();
 
 	const allTags = $derived(collectTags(entries));
 	const filtered = $derived(
@@ -107,6 +106,10 @@
 	/** Runs one user-initiated Google Drive snapshot sync. */
 	async function handleGoogleDriveSync(): Promise<void> {
 		if (syncing) return;
+		if (!isGoogleDriveSyncConfigured()) {
+			syncMessage = 'Google Drive同期失敗: VITE_GOOGLE_CLIENT_ID が未設定です';
+			return;
+		}
 		syncing = true;
 		syncMessage = 'Google Driveと同期中...';
 		try {
@@ -256,9 +259,9 @@
 				<button
 					type="button"
 					class="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-					disabled={!googleDriveSyncConfigured || syncing}
+					disabled={syncing}
 					onclick={handleGoogleDriveSync}
-					title={googleDriveSyncConfigured ? 'Google Driveのアプリ専用領域と同期' : 'VITE_GOOGLE_CLIENT_ID が未設定です'}
+					title="Google Driveのアプリ専用領域と同期"
 				>
 					{syncing ? 'Drive同期中' : 'Google Drive同期'}
 				</button>

@@ -14,6 +14,7 @@ const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 const SYNC_FILE_NAME = 'simplePersonalDB-sync.json';
 const SNAPSHOT_VERSION = 1;
+const TOKEN_REQUEST_TIMEOUT_MS = 120_000;
 
 interface TokenResponse {
 	access_token?: string;
@@ -63,6 +64,13 @@ interface DriveFile {
 
 let gisScriptPromise: Promise<void> | null = null;
 let tokenClient: TokenClient | null = null;
+let pendingTokenRequest:
+	| {
+			resolve: (accessToken: string) => void;
+			reject: (error: Error) => void;
+			timeoutId: number;
+	  }
+	| null = null;
 
 export function isGoogleDriveSyncConfigured(): boolean {
 	return Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
@@ -156,24 +164,38 @@ async function requestAccessToken(): Promise<string> {
 	if (!window.google) {
 		throw new Error('Google Identity Services を読み込めませんでした');
 	}
-	return new Promise((resolve, reject) => {
-		tokenClient ??= window.google!.accounts.oauth2.initTokenClient({
-			client_id: clientId,
-			scope: DRIVE_SCOPE,
-			callback: (response) => {
-				if (response.access_token) {
-					resolve(response.access_token);
-				} else {
-					reject(
-						new Error(
-							response.error_description || response.error || 'Google認証がキャンセルされました'
-						)
-					);
-				}
-			}
-		});
-		tokenClient.requestAccessToken({ prompt: '' });
+	tokenClient ??= window.google.accounts.oauth2.initTokenClient({
+		client_id: clientId,
+		scope: DRIVE_SCOPE,
+		callback: handleTokenResponse
 	});
+	const client = tokenClient;
+	return new Promise((resolve, reject) => {
+		if (pendingTokenRequest) {
+			window.clearTimeout(pendingTokenRequest.timeoutId);
+			pendingTokenRequest.reject(new Error('Google認証を再開始しました'));
+		}
+		const timeoutId = window.setTimeout(() => {
+			pendingTokenRequest = null;
+			reject(new Error('Google認証が完了しませんでした。もう一度同期してください'));
+		}, TOKEN_REQUEST_TIMEOUT_MS);
+		pendingTokenRequest = { resolve, reject, timeoutId };
+		client.requestAccessToken({ prompt: '' });
+	});
+}
+
+function handleTokenResponse(response: TokenResponse): void {
+	if (!pendingTokenRequest) return;
+	const { resolve, reject, timeoutId } = pendingTokenRequest;
+	pendingTokenRequest = null;
+	window.clearTimeout(timeoutId);
+	if (response.access_token) {
+		resolve(response.access_token);
+		return;
+	}
+	reject(
+		new Error(response.error_description || response.error || 'Google認証がキャンセルされました')
+	);
 }
 
 function loadGisScript(): Promise<void> {

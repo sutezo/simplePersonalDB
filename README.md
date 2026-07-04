@@ -64,6 +64,98 @@ cp .env.example .env
 
 同期は画面の「Google Drive同期」ボタンを押した時だけ実行する。保存先はユーザーから見えない Drive の `appDataFolder` で、要求スコープは `https://www.googleapis.com/auth/drive.appdata`。
 
+
+**OAuth クライアントIDの作り方**
+
+1. Google Cloud Console を開く
+   https://console.cloud.google.com/
+
+2. プロジェクトを作成、または既存プロジェクトを選択
+
+3. Drive API を有効化
+   「API とサービス」→「ライブラリ」→ `Google Drive API` →「有効にする」
+
+4. OAuth 同意画面を設定
+   「Google Auth platform」または「OAuth 同意画面」へ移動
+   - アプリ名: `simplePersonalDB` など
+   - ユーザーサポートメール: 自分の Google アカウント
+   - 対象: 個人利用なら `外部`
+   - テストユーザー: 自分の Google アカウントを追加
+
+5. クライアントIDを作成
+   「Google Auth platform」→「クライアント」→「クライアントを作成」
+
+6. アプリケーションの種類を選ぶ
+   `ウェブ アプリケーション`
+
+7. 承認済み JavaScript 生成元を追加
+   ローカル用:
+
+   ```txt
+   http://localhost:42304
+   ```
+
+   GitHub Pages で使うなら:
+
+   ```txt
+   https://sutezo.github.io
+   ```
+
+   `https://sutezo.github.io/simplePersonalDB/` ではなく、origin なので `/simplePersonalDB` は付けません。
+
+8. 作成後に表示される `クライアント ID` をコピー
+   形はだいたいこうです。
+
+   ```txt
+   xxxxx.apps.googleusercontent.com
+   ```
+
+8-1. Drive API が有効か
+  - Google Cloud Console → 対象プロジェクト → 「API とサービス」→「有効な API とサービス」
+  - Google Drive API が有効になっている必要があります。
+
+8-2. OAuth 同意画面にスコープを追加しているか
+  - Google Cloud Console → Google Auth platform → Data Access / スコープ
+
+### 追加するスコープ:
+
+  `https://www.googleapis.com/auth/drive.appdata`
+
+-  このアプリはこのスコープだけ使います。Google 公式でも drive.appdata は「アプリ自身の設定データを Drive 内で管理する」スコープとして定義されています。
+
+  `https://developers.google.com/workspace/drive/api/guides/api-specific-auth`
+
+8-3. 公開ステータスが Testing なら、自分をテストユーザーに追加
+  - Google Auth platform → Audience / Test users
+
+  - 自分の Google アカウントを追加してください。
+  - これを忘れると access_denied / 403 になりがちです。
+
+
+
+
+9. このリポジトリの `.env` に設定
+
+   ```sh
+   cp .env.example .env
+   ```
+
+   `.env`:
+
+   ```sh
+   VITE_GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
+   ```
+
+10. dev server を再起動
+
+   ```sh
+   ./docker.sh dev
+   ```
+
+公式ドキュメント上も、Web アプリでは `Web application` を選び、`Authorized JavaScript origins` に `http://localhost:<port>` を追加する必要があります。
+参照: https://developers.google.com/identity/oauth2/web/guides/get-google-api-clientid
+
+
 ## よく使うコマンド
 
 ```sh
@@ -84,6 +176,7 @@ GitHub Pages へ自動デプロイ（`.github/workflows/deploy.yml`）。
 - 初回のみ、リポジトリの Settings → Pages → Source を「GitHub Actions」にすること
 
 Netlify にもデプロイ可能（`netlify.toml`、`BASE_PATH` 未設定でルート配信）。
+
 
 ## ライセンス
 
