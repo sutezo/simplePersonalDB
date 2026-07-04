@@ -21,6 +21,11 @@
 
 	let { entry, existingTags, onsave, ondelete, oncancel }: Props = $props();
 
+	/** Maximum number of characters allowed per tag. */
+	const MAX_TAG_LENGTH = 7;
+	/** Maximum number of tags allowed per entry. */
+	const MAX_TAG_COUNT = 5;
+
 	// Capturing only the initial value of `entry` is intentional: the parent
 	// remounts this form via {#key} whenever the selected entry changes.
 	// svelte-ignore state_referenced_locally
@@ -50,6 +55,15 @@
 	function save(): void {
 		if (name.trim().length === 0) {
 			errorMessage = '項目名を入力してください';
+			return;
+		}
+		if (currentTags.length > MAX_TAG_COUNT) {
+			errorMessage = `タグは${MAX_TAG_COUNT}個まで登録できます`;
+			return;
+		}
+		const overlongTag = currentTags.find((tag) => tag.length > MAX_TAG_LENGTH);
+		if (overlongTag) {
+			errorMessage = `タグは${MAX_TAG_LENGTH}文字以内で入力してください（「${overlongTag}」）`;
 			return;
 		}
 		errorMessage = '';
@@ -107,6 +121,9 @@
 			placeholder="例: 家電 保証"
 			bind:value={tagsText}
 		/>
+		<span class="text-xs text-slate-500">
+			1タグ{MAX_TAG_LENGTH}文字以内・{MAX_TAG_COUNT}個まで
+		</span>
 	</label>
 	{#if suggestions.length > 0}
 		<div class="flex flex-wrap gap-1.5">
