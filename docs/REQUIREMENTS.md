@@ -8,7 +8,10 @@ iPhone のホーム画面に追加して使うオフライン動作可能な PWA
 
 ## 2. 基本方針
 
-**「静的サイト + 全処理クライアント内 + 外部通信ゼロ」**
+**「静的サイト + 全処理クライアント内」**
+- 既定は外部通信ゼロ
+- ユーザーが Google Drive 同期ボタンを押した場合のみ、Google Identity Services と
+  Google Drive API に通信する
 - sqlite3 のような簡易データベース
 
 ## 3. アーキテクチャ
@@ -20,6 +23,7 @@ iPhone のホーム画面に追加して使うオフライン動作可能な PWA
   バックアップ — 共有シート/Blob ダウンロードで「ファイル」(iCloud Drive) へ
                 インポート（復元）は CSV を `<input type="file">` で読み込み
                 定期的にバックアップを促すバナーを表示
+  Google Drive同期 — 手動ボタンでのみ実行。Drive API の appDataFolder に JSON スナップショットを保存
 ```
 
 ## 4. 技術スタック
@@ -30,6 +34,7 @@ iPhone のホーム画面に追加して使うオフライン動作可能な PWA
 | ビルド/配信 | `adapter-static` + GitHub Pages（fallback: `index.html` を `404.html` に複製） | バックエンドゼロ |
 | PWA | SvelteKit 標準サービスワーカー（`$service-worker`） | 依存追加なしで全アセット precache・完全オフライン |
 | ローカル保存 | IndexedDB (`idb`) + `navigator.storage.persist()` | 平文保存 |
+| Google Drive同期 | Google Identity Services + Drive API (`drive.appdata`) | 手動実行、アプリ専用領域のみ |
 | スタイル | Tailwind CSS 4 | 軽量・依存最小 |
 | テスト | Vitest + Playwright | |
 | CI/CD | GitHub Actions → GitHub Pages 自動デプロイ | |
@@ -54,6 +59,7 @@ pnpmを使用
 - 一覧、詳細の2ペインまたは2画面
 - 入力・編集機能
 - エクスポート(CSV)・インポート(CSV、IDで上書き)
+- Google Drive同期（手動実行のみ、IDごとに `updatedAt` が新しいデータを採用し、削除は削除時刻で同期）
 - バックアップ督促（最終バックアップから7日経過 + 変更ありで表示、スヌーズ可）
 - 集計機能なし
 - SQL実行・結果表示機能、select のみ。項目は選択できるように
@@ -81,5 +87,4 @@ pnpmを使用
 ### 入力
 - タグは1項目に自由にスペース区切りで選べる（1つ以上必須）.似たような文字列で重複・乱発しないよう過去タグからも選べるように
 - 項目、値は自由テキスト
-
 

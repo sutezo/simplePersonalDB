@@ -7,10 +7,12 @@ import {
 	createEntry,
 	deleteEntry,
 	deleteSqlHistory,
+	getDeletedEntries,
 	getMeta,
 	importEntries,
 	listEntries,
 	listSqlHistory,
+	replaceEntries,
 	setMeta,
 	updateEntry
 } from './database';
@@ -44,6 +46,7 @@ describe('database CRUD', () => {
 		await deleteEntry(created.id);
 		const afterDelete = await listEntries();
 		expect(afterDelete.map((e) => e.id)).not.toContain(created.id);
+		expect(await getDeletedEntries()).toHaveProperty(created.id);
 	});
 
 	it('rejects updates to unknown ids', async () => {
@@ -137,6 +140,17 @@ describe('database CRUD', () => {
 
 		await deleteEntry(existing.id);
 		await deleteEntry('imported-new');
+	});
+
+	it('replaces the complete entry set', async () => {
+		const removed = await createEntry({ tags: [], name: 'removed', valueType: 'text', value: '', memo: '' });
+		const kept = await createEntry({ tags: [], name: 'kept', valueType: 'text', value: '', memo: '' });
+		await replaceEntries([{ ...kept, name: 'after replace' }]);
+
+		const listed = await listEntries();
+		expect(listed.some((e) => e.id === removed.id)).toBe(false);
+		expect(listed.find((e) => e.id === kept.id)?.name).toBe('after replace');
+		await deleteEntry(kept.id);
 	});
 
 	it('lists entries newest-first by updatedAt', async () => {

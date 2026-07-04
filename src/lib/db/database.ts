@@ -13,7 +13,12 @@ const META_STORE = 'meta';
 export const SQL_HISTORY_LIMIT = 50;
 
 /** Keys of the small key-value `meta` store. */
-export type MetaKey = 'lastBackupAt' | 'backupSnoozedUntil';
+export type MetaKey =
+	| 'lastBackupAt'
+	| 'backupSnoozedUntil'
+	| 'deletedEntries'
+	| 'googleDriveFileId'
+	| 'lastGoogleDriveSyncAt';
 
 interface PersonalDbSchema extends DBSchema {
 	entries: {
@@ -116,12 +121,38 @@ export async function importEntries(entries: Entry[]): Promise<number> {
 }
 
 /**
+ * Replaces the complete entry set in one transaction.
+ * Used by full-snapshot restore/sync flows.
+ * @param entries - Complete set of entries to keep.
+ */
+export async function replaceEntries(entries: Entry[]): Promise<void> {
+	const db = await getDb();
+	const tx = db.transaction(STORE, 'readwrite');
+	const keep = new Set(entries.map((entry) => entry.id));
+	for (const key of await tx.store.getAllKeys()) {
+		if (!keep.has(String(key))) {
+			await tx.store.delete(key);
+		}
+	}
+	for (const entry of entries) {
+		await tx.store.put(entry);
+	}
+	await tx.done;
+}
+
+/**
  * Deletes an entry.
  * @param id - Id of the entry to delete.
  */
 export async function deleteEntry(id: string): Promise<void> {
 	const db = await getDb();
-	await db.delete(STORE, id);
+	const tx = db.transaction([STORE, META_STORE], 'readwrite');
+	await tx.objectStore(STORE).delete(id);
+	const record = await tx.objectStore(META_STORE).get('deletedEntries');
+	const deletedEntries = parseDeletedEntries(record?.value);
+	deletedEntries[id] = new Date().toISOString();
+	await tx.objectStore(META_STORE).put({ key: 'deletedEntries', value: JSON.stringify(deletedEntries) });
+	await tx.done;
 }
 
 /**
@@ -192,6 +223,39 @@ export async function getMeta(key: MetaKey): Promise<string | null> {
 export async function setMeta(key: MetaKey, value: string): Promise<void> {
 	const db = await getDb();
 	await db.put(META_STORE, { key, value });
+}
+
+/**
+ * Reads deletion tombstones used by snapshot sync.
+ * @returns Map of entry id to deletion timestamp.
+ */
+export async function getDeletedEntries(): Promise<Record<string, string>> {
+	return parseDeletedEntries(await getMeta('deletedEntries'));
+}
+
+/**
+ * Replaces deletion tombstones used by snapshot sync.
+ * @param deletedEntries - Map of entry id to deletion timestamp.
+ */
+export async function setDeletedEntries(deletedEntries: Record<string, string>): Promise<void> {
+	await setMeta('deletedEntries', JSON.stringify(deletedEntries));
+}
+
+function parseDeletedEntries(value: string | null | undefined): Record<string, string> {
+	if (!value) return {};
+	try {
+		const parsed = JSON.parse(value);
+		if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+		const deletedEntries: Record<string, string> = {};
+		for (const [id, deletedAt] of Object.entries(parsed)) {
+			if (typeof deletedAt === 'string') {
+				deletedEntries[id] = deletedAt;
+			}
+		}
+		return deletedEntries;
+	} catch {
+		return {};
+	}
 }
 
 /**

@@ -10,7 +10,8 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 オフラインで動作する簡易個人データベース PWA。iPhone のホーム画面に追加して使う。
-静的サイト + 全処理クライアント内 + 外部通信ゼロ。要件は `docs/REQUIREMENTS.md` を参照。
+静的サイト + 全処理クライアント内。既定では外部通信なしで動作し、Google Drive 同期ボタンを押した時だけ Google API に通信する。
+要件は `docs/REQUIREMENTS.md` を参照。
 
 公開 URL: **https://sutezo.github.io/simplePersonalDB/**
 
@@ -24,6 +25,7 @@
 - カレンダービュー: 日時型エントリを値の日付に配置した月表示（タグ絞り込み対応、表示専用）
 - CSV エクスポート（iOS 共有シート / Blob ダウンロード、BOM 付き UTF-8）と
   CSV インポート（復元、同一 ID は上書き）
+- Google Drive 手動同期（Google Drive API の `appDataFolder` にアプリ専用 JSON スナップショットを保存）
 - バックアップ督促バナー（最終バックアップから 7 日経過 + 変更ありで表示、3 日スヌーズ可）
 - SQL 実行画面: SELECT のみ実行可（sql.js / SQLite wasm）、カラム選択 + GROUP BY の
   クエリビルダー、実行履歴（クリックで再読込、最大 50 件）
@@ -49,6 +51,18 @@ IndexedDB (`idb`) / sql.js (SELECT実行) / Tailwind CSS 4 / Vitest + Playwright
 ```
 
 `node_modules` は Docker volume に置かれ、ソースはバインドマウントされる。
+
+## Google Drive 同期
+
+同期を使う場合は Google Cloud Console で Drive API を有効化し、ウェブアプリ用 OAuth クライアント ID を作成する。
+承認済み JavaScript 生成元にローカル開発用の `http://localhost:42304` と、公開 URL の生成元を登録する。
+
+```sh
+cp .env.example .env
+# .env の VITE_GOOGLE_CLIENT_ID に OAuth クライアント ID を設定
+```
+
+同期は画面の「Google Drive同期」ボタンを押した時だけ実行する。保存先はユーザーから見えない Drive の `appDataFolder` で、要求スコープは `https://www.googleapis.com/auth/drive.appdata`。
 
 ## よく使うコマンド
 

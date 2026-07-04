@@ -17,6 +17,7 @@
 	import { collectTags, filterEntries, sortByUpdatedAt } from '$lib/db/filter';
 	import { csvToEntries, exportCsv } from '$lib/db/csv';
 	import { needsBackupReminder, snoozeUntil } from '$lib/db/backup';
+	import { isGoogleDriveSyncConfigured, syncWithGoogleDrive } from '$lib/db/googleDriveSync';
 	import EntryForm from '$lib/components/EntryForm.svelte';
 	import TagFilter from '$lib/components/TagFilter.svelte';
 	import VirtualList from '$lib/components/VirtualList.svelte';
@@ -32,7 +33,11 @@
 	let lastBackupAt = $state<string | null>(null);
 	let backupSnoozedUntil = $state<string | null>(null);
 	let importMessage = $state('');
+	let syncMessage = $state('');
+	let syncing = $state(false);
+	let lastGoogleDriveSyncAt = $state<string | null>(null);
 	let fileInput = $state<HTMLInputElement | null>(null);
+	const googleDriveSyncConfigured = isGoogleDriveSyncConfigured();
 
 	const allTags = $derived(collectTags(entries));
 	const filtered = $derived(
@@ -51,6 +56,7 @@
 		await reload();
 		lastBackupAt = await getMeta('lastBackupAt');
 		backupSnoozedUntil = await getMeta('backupSnoozedUntil');
+		lastGoogleDriveSyncAt = await getMeta('lastGoogleDriveSyncAt');
 	});
 
 	/** Reloads all entries from IndexedDB. */
@@ -95,6 +101,25 @@
 			importMessage = `${count}件をインポートしました`;
 		} catch (error) {
 			importMessage = `インポート失敗: ${error instanceof Error ? error.message : String(error)}`;
+		}
+	}
+
+	/** Runs one user-initiated Google Drive snapshot sync. */
+	async function handleGoogleDriveSync(): Promise<void> {
+		if (syncing) return;
+		syncing = true;
+		syncMessage = 'Google Driveと同期中...';
+		try {
+			const result = await syncWithGoogleDrive();
+			await reload();
+			lastGoogleDriveSyncAt = result.syncedAt;
+			lastBackupAt = result.syncedAt;
+			await setMeta('lastBackupAt', result.syncedAt);
+			syncMessage = `Google Drive同期完了: 反映 ${result.downloaded}件 / 保存 ${result.uploaded}件`;
+		} catch (error) {
+			syncMessage = `Google Drive同期失敗: ${error instanceof Error ? error.message : String(error)}`;
+		} finally {
+			syncing = false;
 		}
 	}
 
@@ -228,6 +253,15 @@
 				>
 					CSVインポート
 				</button>
+				<button
+					type="button"
+					class="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={!googleDriveSyncConfigured || syncing}
+					onclick={handleGoogleDriveSync}
+					title={googleDriveSyncConfigured ? 'Google Driveのアプリ専用領域と同期' : 'VITE_GOOGLE_CLIENT_ID が未設定です'}
+				>
+					{syncing ? 'Drive同期中' : 'Google Drive同期'}
+				</button>
 				<input
 					type="file"
 					accept=".csv,text/csv"
@@ -239,6 +273,11 @@
 			{#if importMessage}
 				<p class="text-xs {importMessage.startsWith('インポート失敗') ? 'text-red-600' : 'text-emerald-700'}">
 					{importMessage}
+				</p>
+			{/if}
+			{#if syncMessage || lastGoogleDriveSyncAt}
+				<p class="text-xs {syncMessage.startsWith('Google Drive同期失敗') ? 'text-red-600' : 'text-emerald-700'}">
+					{syncMessage || `前回Drive同期: ${formatDateTime(lastGoogleDriveSyncAt!)}`}
 				</p>
 			{/if}
 			<TagFilter tags={allTags} bind:selected={selectedTags} />
