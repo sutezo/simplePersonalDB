@@ -1,0 +1,7 @@
+/* Global stylesheet: loads Tailwind CSS 4 and app-wide base styles. */
+@import 'tailwindcss';
+
+html,
+body {
+	height: 100%;
+}

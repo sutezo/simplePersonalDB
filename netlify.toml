@@ -1,0 +1,10 @@
+# Netlify build configuration for the static SPA.
+[build]
+  command = "pnpm build"
+  publish = "build"
+
+# Serve the SPA fallback for every route (client-side routing).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

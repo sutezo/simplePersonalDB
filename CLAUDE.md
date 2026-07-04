@@ -4,34 +4,53 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Status
+## プロジェクト概要
 
-**Pre-implementation.** No application code exists yet — only `docs/REQUIREMENTS.md`, which is the source of truth for all design decisions. Read it before implementing anything. Update this CLAUDE.md once the project is scaffolded (build/test commands, actual structure).
+simplePersonalDB — オフライン動作する汎用個人データベース PWA（iPhone ホーム画面追加用）。
+基本方針: **静的サイト + 全処理クライアント内 + 外部通信ゼロ**。要件は `docs/REQUIREMENTS.md` が正。
 
-## What This Project Is
+## コマンド
 
-simplePersonalDB — a generic personal database implemented as an offline-capable PWA, added to the iPhone home screen. Core principle: **static site + all processing client-side + zero external communication**. No backend, no store app.
+ホストに Node は無い。**すべて `./docker.sh` 経由で実行する**（直接 `pnpm`/`node` を叩かない）。
 
-## Planned Tech Stack (from docs/REQUIREMENTS.md)
+```sh
+./docker.sh build              # イメージ作成 + pnpm install（初回）
+./docker.sh dev                # 開発サーバー → http://localhost:5173
+./docker.sh preview            # ビルド + プレビュー → http://localhost:4173
+./docker.sh run pnpm test      # ユニットテスト (Vitest)
+./docker.sh run pnpm test -- src/lib/db/csv.test.ts   # 単一テストファイル
+./docker.sh run pnpm check     # svelte-check（型チェック）
+./docker.sh run pnpm build     # 本番ビルド → build/
+./docker.sh run pnpm icons     # PWA アイコン再生成
+```
 
-- **Framework**: SvelteKit 2 + Svelte 5 (runes), TypeScript strict, pure SPA (`ssr=false`, `adapter-static`)
-- **PWA**: SvelteKit standard service worker (`$service-worker`) — precache all assets, fully offline
-- **Storage**: IndexedDB via `idb`, with `navigator.storage.persist()`
-- **Styling**: Tailwind CSS 4
-- **Testing**: Vitest + Playwright
-- **Package manager**: pnpm
-- **Deploy**: GitHub → Netlify auto-deploy (fallback: `index.html`)
+ポート競合時は `DOCKER_FLAGS="-p 4174:4173" ./docker.sh run pnpm preview` のようにホスト側ポートを変えられる。
+Playwright (`pnpm test:e2e`) はコンテナにブラウザ未導入のため、実行には `playwright install --with-deps` が必要。
 
-## Development Environment
+## アーキテクチャ
 
-macOS + Docker. Node is NOT installed on the host — all commands run through `./docker.sh` (`build` / `shell` / `rebuild` / `clean`; script not yet created). `node_modules` lives in a Docker volume; source is bind-mounted. Do not run `pnpm`/`node` directly on the host.
+SvelteKit 2 + Svelte 5 (runes) の純 SPA。`+layout.ts` で `ssr=false`、`adapter-static` の
+`fallback: index.html` で全ルートをクライアント処理（Netlify 側リダイレクトは `netlify.toml`）。
 
-## Key Design Constraints (iOS PWA)
+データフロー: UI → `src/lib/db/database.ts`（idb / IndexedDB、唯一の永続層）→ 画面へ再ロード。
+検索・タグ絞り込み・並べ替えは `src/lib/db/filter.ts` の純粋関数でメモリ内処理。
 
-- Export/backup is via Blob download / Web Share API (File System Access API is unsupported on iOS); import is `<input type="file">` — per current requirements, import is out of scope
-- Data survival relies on `navigator.storage.persist()` plus prompting the user to back up
-- Data is stored in plaintext in IndexedDB
+SQL 機能（`/sql`）: 実行のたびに IndexedDB の全レコードを sql.js（SQLite wasm）のインメモリ DB
+（テーブル名 `entries`、tags はスペース結合の TEXT）へ流し込み、SELECT のみ実行して破棄する。
+wasm は `?url` インポートでバンドルに同梱（外部通信ゼロを維持）。
+純粋ロジックは `sqlEngine.ts`（Node でもテスト可能）、ブラウザ専用の wasm ロードは `sqlLoader.ts` に分離。
 
-## Data Model & Features (summary)
+PWA: `src/service-worker.ts` が全ビルドアセット + `/`（SPA フォールバック）を precache。
+オフライン時のナビゲーションはキャッシュ済み `/` を返す。起動時に `navigator.storage.persist()` を要求。
 
-A single record type: tags (space-free words, multiple, ~10 categories), item name, value type (text or date), value (~20 chars), memo (multi-line ~100 chars), created/updated timestamps (read-only). Features: list/detail two-pane UI, tag filtering (multi-select), cross-field keyword + date-range search, sort by last-updated, virtual scrolling for large lists, CSV export, and a SELECT-only SQL execution view (with column selection and GROUP BY). No aggregation dashboards. Tag input should suggest existing tags to avoid near-duplicate proliferation.
+UI 構成: `+page.svelte` が一覧 + 詳細の 2 ペイン（モバイルは切替式）を統括。
+`EntryForm` は props の初期値のみ取り込み、親が `{#key selectedId}` で再マウントする設計
+（`svelte-ignore state_referenced_locally` はそのための意図的な指定）。
+一覧は自前の `VirtualList.svelte`（固定行高の仮想スクロール）。
+
+## 設計上の制約
+
+- 外部通信ゼロ: CDN・外部フォント・API を追加しない。依存はすべてバンドルに同梱する
+- SQL は SELECT のみ許可（`validateSelectOnly` で検証）。書き込み系を通さないこと
+- `createdAt` / `updatedAt` は読取専用。更新は `updateEntry()` 経由でのみ `updatedAt` を更新
+- エクスポートは Blob ダウンロード / Web Share API（iOS は File System Access API 非対応）

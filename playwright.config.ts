@@ -1,0 +1,15 @@
+// Playwright configuration: builds the static site and serves the preview
+// server, then runs the e2e smoke tests against it.
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+	testDir: 'e2e',
+	webServer: {
+		command: 'pnpm build && pnpm preview',
+		port: 4173,
+		reuseExistingServer: !process.env.CI
+	},
+	use: {
+		baseURL: 'http://localhost:4173'
+	}
+});
