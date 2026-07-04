@@ -181,11 +181,11 @@
 					placeholder="キーワード検索（項目・値・メモ）"
 					bind:value={keyword}
 				/>
-				<label class="flex shrink-0 items-center gap-1 text-xs text-slate-600">
-					<span>更新日</span>
+				<label class="flex shrink-0 items-center gap-1">
+					<span class="text-xs text-slate-600">更新日</span>
 					<input
 						type="date"
-						class="rounded border border-slate-300 px-2 py-1"
+						class="shrink-0 rounded border border-slate-300 px-2 py-1"
 						bind:value={from}
 					/>
 				</label>
