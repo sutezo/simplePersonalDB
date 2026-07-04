@@ -38,24 +38,56 @@ function chunk(type, data) {
 }
 
 /**
- * Renders the icon as a truecolor PNG.
+ * Renders the icon as a truecolor PNG: a database cylinder ("can") shape
+ * with a lighter lid and two separator arcs on a dark background.
  * @param {number} size - Icon width/height in pixels.
  * @returns {Buffer} PNG file bytes.
  */
 function renderIcon(size) {
 	const bg = [15, 23, 42]; // slate-900
-	const fg = [125, 211, 252]; // sky-300
+	const body = [125, 211, 252]; // sky-300
+	const lid = [186, 230, 253]; // sky-200
 	const cx = size / 2;
-	const cy = size / 2;
-	const radius = size * 0.3;
+	const rx = size * 0.28; // cylinder half-width
+	const ry = rx * 0.38; // cap ellipse half-height
+	const yTop = size * 0.3;
+	const yBottom = size * 0.7;
+
+	/**
+	 * Evaluates the ellipse equation for a cap centered at (cx, yc).
+	 * @param {number} x - Pixel x.
+	 * @param {number} y - Pixel y.
+	 * @param {number} yc - Ellipse vertical center.
+	 * @returns {number} <= 1 when the point is inside the ellipse.
+	 */
+	const ellipse = (x, y, yc) => ((x - cx) / rx) ** 2 + ((y - yc) / ry) ** 2;
+
+	/**
+	 * Picks the color of one pixel.
+	 * @param {number} x - Pixel x.
+	 * @param {number} y - Pixel y.
+	 * @returns {number[]} RGB triple.
+	 */
+	function colorAt(x, y) {
+		const inBody = Math.abs(x - cx) <= rx && y >= yTop && y <= yBottom;
+		const inBottomCap = y > yBottom && ellipse(x, y, yBottom) <= 1;
+		if (ellipse(x, y, yTop) <= 1) return lid;
+		if (!inBody && !inBottomCap) return bg;
+		// Separator arcs (lower half of an ellipse) suggest stacked discs.
+		for (const k of [1 / 3, 2 / 3]) {
+			const yc = yTop + (yBottom - yTop) * k;
+			const e = ellipse(x, y, yc);
+			if (y >= yc && e >= 0.82 && e <= 1) return bg;
+		}
+		return body;
+	}
 
 	const raw = Buffer.alloc(size * (1 + size * 3));
 	for (let y = 0; y < size; y++) {
 		const rowStart = y * (1 + size * 3);
 		raw[rowStart] = 0; // filter: none
 		for (let x = 0; x < size; x++) {
-			const inCircle = (x - cx) ** 2 + (y - cy) ** 2 <= radius ** 2;
-			const [r, g, b] = inCircle ? fg : bg;
+			const [r, g, b] = colorAt(x, y);
 			const offset = rowStart + 1 + x * 3;
 			raw[offset] = r;
 			raw[offset + 1] = g;
