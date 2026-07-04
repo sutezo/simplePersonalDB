@@ -3,6 +3,20 @@
 オフラインで動作する簡易個人データベース PWA。iPhone のホーム画面に追加して使う。
 静的サイト + 全処理クライアント内 + 外部通信ゼロ。要件は `docs/REQUIREMENTS.md` を参照。
 
+公開 URL: **https://sutezo.github.io/simplePersonalDB/**
+
+## 機能
+
+- 項目・値・タグ・メモの登録 / 編集 / 削除（IndexedDB に保存、完全ローカル）
+- 一覧 + 詳細の 2 ペイン（モバイルは 2 画面切替）、仮想スクロール
+- キーワード（項目・値・メモ横断）・タグ複数・更新日範囲での絞り込み、最終更新順ソート
+- タグはスペース区切り入力 + 既存タグからワンタップ追加（重複乱発防止）
+- データ型「年月日」選択時は今日の日付を自動入力
+- CSV エクスポート（iOS 共有シート / Blob ダウンロード、BOM 付き UTF-8）
+- SQL 実行画面: SELECT のみ実行可（sql.js / SQLite wasm）、カラム選択 + GROUP BY の
+  クエリビルダー、実行履歴（クリックで再読込、最大 50 件）
+- PWA: 全アセット precache による完全オフライン動作、`navigator.storage.persist()` 要求
+
 ## 技術スタック
 
 SvelteKit 2 + Svelte 5 (runes) / TypeScript strict / adapter-static (SPA) /

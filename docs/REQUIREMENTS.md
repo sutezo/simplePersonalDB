@@ -26,12 +26,12 @@ iPhone のホーム画面に追加して使うオフライン動作可能な PWA
 | 領域 | 選定 | 理由 |
 |---|---|---|
 | フレームワーク | SvelteKit 2 + Svelte 5 (runes), TypeScript strict | SSR 不要のため純 SPA |
-| ビルド/配信 | `adapter-static` + Netlify（fallback: `index.html`） | バックエンドゼロ |
+| ビルド/配信 | `adapter-static` + GitHub Pages（fallback: `index.html` を `404.html` に複製） | バックエンドゼロ |
 | PWA | SvelteKit 標準サービスワーカー（`$service-worker`） | 依存追加なしで全アセット precache・完全オフライン |
 | ローカル保存 | IndexedDB (`idb`) + `navigator.storage.persist()` | 平文保存 |
 | スタイル | Tailwind CSS 4 | 軽量・依存最小 |
-| テスト | Vitest（暗号化ラウンドトリップ必須） + Playwright | |
-| CI/CD | GitHub → Netlify 自動デプロイ | |
+| テスト | Vitest + Playwright | |
+| CI/CD | GitHub Actions → GitHub Pages 自動デプロイ | |
 | ビルド | pnpm | |
 
 ## 5. iOS PWA の既知の制約（設計に織り込み済み）

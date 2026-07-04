@@ -24,7 +24,7 @@ simplePersonalDB — オフライン動作する汎用個人データベース P
 ./docker.sh run pnpm icons     # PWA アイコン再生成
 ```
 
-このマシンでは他プロジェクトのコンテナがホートの 4173/5173 を恒常的に専有しているため、
+このマシンでは他プロジェクトのコンテナがホストの 4173/5173 を恒常的に専有しているため、
 dev/preview のポートは 5173/4173 ではなく 42304/42305 に固定している（`vite.config.ts` の
 `server.port`/`preview.port` と `docker.sh` のポート公開を両方揃える必要がある）。
 `./docker.sh shell` に入って手動で `pnpm dev`/`pnpm preview` を実行する場合も、
@@ -34,7 +34,7 @@ Playwright (`pnpm test:e2e`) はコンテナにブラウザ未導入のため、
 ## アーキテクチャ
 
 SvelteKit 2 + Svelte 5 (runes) の純 SPA。`+layout.ts` で `ssr=false`、`adapter-static` の
-`fallback: index.html` で全ルートをクライアント処理（Netlify 側リダイレクトは `netlify.toml`）。
+`fallback: index.html` で全ルートをクライアント処理。
 
 データフロー: UI → `src/lib/db/database.ts`（idb / IndexedDB、唯一の永続層）→ 画面へ再ロード。
 検索・タグ絞り込み・並べ替えは `src/lib/db/filter.ts` の純粋関数でメモリ内処理。
@@ -47,13 +47,27 @@ SQL 機能（`/sql`）: 実行のたびに IndexedDB の全レコードを sql.j
 wasm は `?url` インポートでバンドルに同梱（外部通信ゼロを維持）。
 純粋ロジックは `sqlEngine.ts`（Node でもテスト可能）、ブラウザ専用の wasm ロードは `sqlLoader.ts` に分離。
 
-PWA: `src/service-worker.ts` が全ビルドアセット + `/`（SPA フォールバック）を precache。
-オフライン時のナビゲーションはキャッシュ済み `/` を返す。起動時に `navigator.storage.persist()` を要求。
+PWA: `src/service-worker.ts` が全ビルドアセット + `${base}/`（SPA フォールバック）を precache。
+オフライン時のナビゲーションはキャッシュ済みフォールバックを返す。起動時に `navigator.storage.persist()` を要求。
+アイコンは `scripts/generate-icons.mjs`（依存なしの PNG エンコーダ、DB シリンダーの絵）で生成。
 
 UI 構成: `+page.svelte` が一覧 + 詳細の 2 ペイン（モバイルは切替式）を統括。
 `EntryForm` は props の初期値のみ取り込み、親が `{#key selectedId}` で再マウントする設計
 （`svelte-ignore state_referenced_locally` はそのための意図的な指定）。
 一覧は自前の `VirtualList.svelte`（固定行高の仮想スクロール）。
+
+## デプロイ（GitHub Pages）
+
+`main` への push で `.github/workflows/deploy.yml` が自動デプロイ →
+**https://sutezo.github.io/simplePersonalDB/**（Pages ソースは「GitHub Actions」設定済み）。
+
+- サブパス配信のため CI では `BASE_PATH=/simplePersonalDB` でビルドする
+  （`svelte.config.js` の `paths.base`。ローカル/Netlify は未設定でルート配信）
+- **内部リンクには必ず `$app/paths` の `base` を付けること**（`+layout.svelte` 参照）。
+  manifest 内のパスは相対で書く
+- GitHub Pages にはリライトが無いため、CI で `index.html` を `404.html` にコピーして
+  SPA フォールバックにしている（`/sql` 直アクセスは HTTP 404 ステータスだが表示は正常）
+- Netlify にも配信可能（`netlify.toml` のリダイレクトでフォールバック）
 
 ## 設計上の制約
 
