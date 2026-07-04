@@ -57,6 +57,10 @@
 			errorMessage = '項目名を入力してください';
 			return;
 		}
+		if (currentTags.length === 0) {
+			errorMessage = 'タグを1つ以上入力してください';
+			return;
+		}
 		if (currentTags.length > MAX_TAG_COUNT) {
 			errorMessage = `タグは${MAX_TAG_COUNT}個まで登録できます`;
 			return;
@@ -114,7 +118,7 @@
 	<h2 class="text-lg font-bold">{entry ? '編集' : '新規登録'}</h2>
 
 	<label class="flex flex-col gap-1 text-sm">
-		<span class="font-medium">タグ（スペース区切り）</span>
+		<span class="font-medium">タグ（スペース区切り） *</span>
 		<input
 			type="text"
 			class="rounded border border-slate-300 px-3 py-2"
@@ -122,7 +126,7 @@
 			bind:value={tagsText}
 		/>
 		<span class="text-xs text-slate-500">
-			1タグ{MAX_TAG_LENGTH}文字以内・{MAX_TAG_COUNT}個まで
+			1つ以上必須・1タグ{MAX_TAG_LENGTH}文字以内・{MAX_TAG_COUNT}個まで
 		</span>
 	</label>
 	{#if suggestions.length > 0}
