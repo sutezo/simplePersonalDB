@@ -2,13 +2,14 @@
 // works fully offline, serving the SPA fallback page for navigations.
 /// <reference types="@sveltejs/kit" />
 /// <reference lib="webworker" />
-import { build, files, version } from '$service-worker';
+import { base, build, files, version } from '$service-worker';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 const CACHE = `cache-${version}`;
-// '/' returns the SPA fallback page and is cached for offline navigation.
-const ASSETS = [...build, ...files, '/'];
+// The app root returns the SPA fallback page; cache it for offline navigation.
+const FALLBACK = `${base}/`;
+const ASSETS = [...build, ...files, FALLBACK];
 
 sw.addEventListener('install', (event) => {
 	event.waitUntil(
@@ -54,7 +55,7 @@ sw.addEventListener('fetch', (event) => {
 			} catch (error) {
 				// Offline: navigations fall back to the cached SPA shell.
 				if (request.mode === 'navigate') {
-					const fallback = await cache.match('/');
+					const fallback = await cache.match(FALLBACK);
 					if (fallback) return fallback;
 				}
 				const hit = await cache.match(request);

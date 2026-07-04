@@ -9,7 +9,12 @@ const config = {
   kit: {
     adapter: adapter({
       fallback: 'index.html'
-    })
+    }),
+    paths: {
+      // GitHub Pages serves the site under /<repo>/; the deploy workflow
+      // sets BASE_PATH accordingly. Local dev uses ''.
+      base: process.env.BASE_PATH || ''
+    }
   }
 };
 

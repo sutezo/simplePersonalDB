@@ -36,5 +36,11 @@ IndexedDB (`idb`) / sql.js (SELECT実行) / Tailwind CSS 4 / Vitest + Playwright
 
 ## デプロイ
 
-GitHub → Netlify 自動デプロイ。ビルドコマンド `pnpm build`、公開ディレクトリ `build`、
-SPA フォールバックは `index.html`（adapter-static の `fallback` で生成）。
+GitHub Pages へ自動デプロイ（`.github/workflows/deploy.yml`）。
+`main` への push で GitHub Actions がビルドし、`https://sutezo.github.io/simplePersonalDB/` に公開される。
+
+- サブパス配信のため `BASE_PATH=/simplePersonalDB` を付けてビルドする（`svelte.config.js` の `paths.base`）
+- GitHub Pages にはリライト機能がないため、SPA フォールバックとして `index.html` を `404.html` にコピーする
+- 初回のみ、リポジトリの Settings → Pages → Source を「GitHub Actions」にすること
+
+Netlify にもデプロイ可能（`netlify.toml`、`BASE_PATH` 未設定でルート配信）。

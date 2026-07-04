@@ -5,6 +5,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import { page } from '$app/state';
 	import { requestPersistentStorage } from '$lib/db/database';
 	import type { Snippet } from 'svelte';
@@ -19,10 +20,22 @@
 		void requestPersistentStorage();
 	});
 
+	// base-prefixed so links work when hosted under a sub path (GitHub Pages).
 	const links = [
-		{ href: '/', label: '一覧' },
-		{ href: '/sql', label: 'SQL' }
+		{ href: `${base}/`, label: '一覧' },
+		{ href: `${base}/sql`, label: 'SQL' }
 	];
+
+	/**
+	 * Checks whether a nav link points at the current page,
+	 * tolerating a trailing-slash difference.
+	 * @param href - Link target.
+	 * @param pathname - Current page pathname.
+	 * @returns True when the link is active.
+	 */
+	function isActive(href: string, pathname: string): boolean {
+		return pathname === href || `${pathname}/` === href;
+	}
 </script>
 
 <div class="flex h-dvh flex-col bg-slate-50 text-slate-900">
@@ -33,7 +46,7 @@
 				<a
 					href={link.href}
 					class="rounded px-3 py-1.5 text-sm font-medium
-						{page.url.pathname === link.href
+						{isActive(link.href, page.url.pathname)
 						? 'bg-slate-800 text-white'
 						: 'text-slate-600 hover:bg-slate-100'}"
 				>
