@@ -174,12 +174,26 @@
 			</div>
 		{/if}
 		<div class="flex flex-col gap-2 border-b border-slate-200 bg-white p-3">
-			<div class="flex gap-2">
+			<div class="flex flex-wrap items-center gap-2">
 				<input
 					type="search"
 					class="min-w-0 flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
 					placeholder="キーワード検索（項目・値・メモ）"
 					bind:value={keyword}
+				/>
+				<label class="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+					<span>更新日</span>
+					<input
+						type="date"
+						class="rounded border border-slate-300 px-2 py-1"
+						bind:value={from}
+					/>
+				</label>
+				<span class="shrink-0 text-xs text-slate-600">〜</span>
+				<input
+					type="date"
+					class="shrink-0 rounded border border-slate-300 px-2 py-1"
+					bind:value={to}
 				/>
 				<button
 					type="button"
@@ -193,16 +207,6 @@
 				</button>
 			</div>
 			<div class="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-				<label class="flex items-center gap-1">
-					<span>更新日</span>
-					<input
-						type="date"
-						class="rounded border border-slate-300 px-2 py-1"
-						bind:value={from}
-					/>
-				</label>
-				<span>〜</span>
-				<input type="date" class="rounded border border-slate-300 px-2 py-1" bind:value={to} />
 				<button
 					type="button"
 					class="ml-auto rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
