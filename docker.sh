@@ -33,8 +33,8 @@ Commands:
   rebuild          Rebuild the image without cache and reinstall dependencies
   shell            Open an interactive shell inside the container
   clean            Remove the image and the node_modules / pnpm store volumes
-  dev              Start the Vite dev server (http://localhost:5173)
-  preview          Build the app and serve it (http://localhost:4173)
+  dev              Start the Vite dev server (http://localhost:42304)
+  preview          Build the app and serve it (http://localhost:42305)
   run <cmd...>     Run an arbitrary command inside the container
                    e.g. ./docker.sh run pnpm test
 EOF
@@ -51,7 +51,7 @@ case "$cmd" in
     run pnpm install --force
     ;;
   shell)
-    run bash
+    DOCKER_FLAGS="-p 42304:42304 -p 42305:4173" run bash
     ;;
   clean)
     docker rmi -f "$IMAGE" 2>/dev/null || true
@@ -59,10 +59,12 @@ case "$cmd" in
     echo "Removed image and volumes."
     ;;
   dev)
-    DOCKER_FLAGS="-p 42304:5173" run pnpm dev
+    DOCKER_FLAGS="-p 42304:42304" run pnpm dev
     ;;
   preview)
-    DOCKER_FLAGS="-p 4173:4173" run bash -lc "pnpm build && pnpm preview"
+    # Host 4173 is commonly taken by other projects' containers on this
+    # machine, so the internal Vite preview port (4173) is published on 42305.
+    DOCKER_FLAGS="-p 42305:4173" run bash -lc "pnpm build && pnpm preview"
     ;;
   run)
     shift

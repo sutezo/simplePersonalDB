@@ -6,6 +6,14 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
+  server: {
+    host: '0.0.0.0',
+    port: 42304
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173
+  },
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node'

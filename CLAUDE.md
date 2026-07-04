@@ -15,8 +15,8 @@ simplePersonalDB — オフライン動作する汎用個人データベース P
 
 ```sh
 ./docker.sh build              # イメージ作成 + pnpm install（初回）
-./docker.sh dev                # 開発サーバー → http://localhost:5173
-./docker.sh preview            # ビルド + プレビュー → http://localhost:4173
+./docker.sh dev                # 開発サーバー → http://localhost:42304
+./docker.sh preview            # ビルド + プレビュー → http://localhost:42305
 ./docker.sh run pnpm test      # ユニットテスト (Vitest)
 ./docker.sh run pnpm test -- src/lib/db/csv.test.ts   # 単一テストファイル
 ./docker.sh run pnpm check     # svelte-check（型チェック）
@@ -24,7 +24,11 @@ simplePersonalDB — オフライン動作する汎用個人データベース P
 ./docker.sh run pnpm icons     # PWA アイコン再生成
 ```
 
-ポート競合時は `DOCKER_FLAGS="-p 4174:4173" ./docker.sh run pnpm preview` のようにホスト側ポートを変えられる。
+このマシンでは他プロジェクトのコンテナがホートの 4173/5173 を恒常的に専有しているため、
+dev/preview のポートは 5173/4173 ではなく 42304/42305 に固定している（`vite.config.ts` の
+`server.port`/`preview.port` と `docker.sh` のポート公開を両方揃える必要がある）。
+`./docker.sh shell` に入って手動で `pnpm dev`/`pnpm preview` を実行する場合も、
+`shell` コマンド自体が両ポートを公開済みなのでそのまま `http://localhost:42304` 等で開ける。
 Playwright (`pnpm test:e2e`) はコンテナにブラウザ未導入のため、実行には `playwright install --with-deps` が必要。
 
 ## アーキテクチャ

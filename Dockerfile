@@ -7,6 +7,6 @@ RUN npm install -g pnpm@10
 WORKDIR /app
 
 # Vite dev server / preview server
-EXPOSE 5173 4173
+EXPOSE 42304 4173
 
 CMD ["bash"]
