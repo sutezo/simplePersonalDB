@@ -34,6 +34,7 @@ jobs:
       - run: pnpm build
         env:
           BASE_PATH: /${{ github.event.repository.name }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
 
       # GitHub Pages has no rewrite rules; serving the SPA fallback as 404.html
       # makes client-side routes (e.g. /sql) work on hard reloads.

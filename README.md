@@ -174,6 +174,9 @@ GitHub Pages へ自動デプロイ（`.github/workflows/deploy.yml`）。
 - サブパス配信のため `BASE_PATH=/simplePersonalDB` を付けてビルドする（`svelte.config.js` の `paths.base`）
 - GitHub Pages にはリライト機能がないため、SPA フォールバックとして `index.html` を `404.html` にコピーする
 - 初回のみ、リポジトリの Settings → Pages → Source を「GitHub Actions」にすること
+- Google Drive 同期を本番でも使う場合は、リポジトリの Settings → Secrets and variables → Actions → Variables に
+  `VITE_GOOGLE_CLIENT_ID` を追加すること
+- Google Cloud Console の OAuth クライアントには、承認済み JavaScript 生成元として `https://sutezo.github.io` を追加すること
 
 Netlify にもデプロイ可能（`netlify.toml`、`BASE_PATH` 未設定でルート配信）。
 
