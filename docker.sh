@@ -59,7 +59,7 @@ case "$cmd" in
     echo "Removed image and volumes."
     ;;
   dev)
-    DOCKER_FLAGS="-p 5173:5173" run pnpm dev
+    DOCKER_FLAGS="-p 42304:5173" run pnpm dev
     ;;
   preview)
     DOCKER_FLAGS="-p 4173:4173" run bash -lc "pnpm build && pnpm preview"

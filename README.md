@@ -14,7 +14,7 @@ IndexedDB (`idb`) / sql.js (SELECT実行) / Tailwind CSS 4 / Vitest + Playwright
 
 ```sh
 ./docker.sh build      # イメージ作成 + pnpm install（初回に実行）
-./docker.sh dev        # 開発サーバー起動 → http://localhost:5173
+./docker.sh dev        # 開発サーバー起動 → http://localhost:42304
 ./docker.sh preview    # ビルドしてプレビュー → http://localhost:4173
 ./docker.sh shell      # コンテナ内シェル
 ./docker.sh rebuild    # イメージをキャッシュなしで再構築 + 再インストール
