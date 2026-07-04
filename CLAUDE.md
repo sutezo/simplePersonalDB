@@ -12,6 +12,7 @@ simplePersonalDB — オフライン動作する汎用個人データベース P
 ## コマンド
 
 ホストに Node は無い。**すべて `./docker.sh` 経由で実行する**（直接 `pnpm`/`node` を叩かない）。
+起動手順は `/run`、変更後の検証手順は `/verify`（`.claude/skills/`）にまとまっている。
 
 ```sh
 ./docker.sh build              # イメージ作成 + pnpm install（初回）
