@@ -9,7 +9,7 @@
 [![PWA](https://img.shields.io/badge/PWA-offline-5A0FC8?logo=pwa&logoColor=white)](https://sutezo.github.io/simplePersonalDB/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-オフラインで動作する簡易個人データベース PWA。iPhone のホーム画面に追加して使う。
+オフラインで動作する簡易個人データベース PWA。Android/iPhone のホーム画面に追加して使う。
 静的サイト + 全処理クライアント内。既定では外部通信なしで動作し、Google Drive 同期ボタンを押した時だけ Google API に通信する。
 要件は `docs/REQUIREMENTS.md` を参照。
 
