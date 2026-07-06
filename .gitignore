@@ -8,3 +8,4 @@ playwright-report/
 .pnpm-store/
 .serena/
 .claude/settings.local.json
+.env
